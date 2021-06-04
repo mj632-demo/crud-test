@@ -26,4 +26,10 @@ public class UserLogin {
     public List<User> getAllUsers(){
         return this.userCrudService.getAllUsers();
     }
+
+    @RequestMapping(value = "/getHelloWorld", method = RequestMethod.GET)
+    public String getHelloWorld(){
+        final String CodeCommitPullRequestSourceBranchName = String.format("SingleSourceCommitFeature-%s", System.currentTimeMillis());
+        return CodeCommitPullRequestSourceBranchName;
+    }
 }
