@@ -1,27 +1,64 @@
-steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0   # Required
-   
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      if: ${{ always() }} # This ensures that your workflow runs successfully
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-west-2
+# This workflow will build a Java project with Maven
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
 
-    - name: AWS CodeGuru Reviewer Scanner
-      uses: aws-actions/codeguru-reviewer@v1.1
-      if: ${{ always() }} 
-      with:
-        build_path: target # build artifact(s) directory
-        s3_bucket: codeguru-reviewer-patmanth-bucket  # S3 Bucket with "codeguru-reviewer-*" prefix
+name: Java CI with Maven
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+#   schedule: 
+#     # * is a special character in YAML so you have to quote this string
+#     - cron:  '*/150 * * * *'   # Runs every 15 mins
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'     
+        required: true
+        default: 'warning'
+      tags:
+        description: 'Test scenario tags'  
+
+
+
+jobs:
+  build:
+    name: Upload to Amazon S3
+    runs-on: ubuntu-latest
     
-    - name: Upload review result
-      if: ${{ github.event_name != 'push' }}
-      uses: github/codeql-action/upload-sarif@v1
-      with:
-        sarif_file: codeguru-results.sarif.json
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v2
+          with:
+            fetch-depth: 0   # Required
+
+        - name: Set up JDK 1.8
+          uses: actions/setup-java@v1
+          with:
+            java-version: 1.8
+
+        - name: Build with Maven
+          run: mvn -B package --file pom.xml
+
+        - name: Configure AWS Credentials
+          uses: aws-actions/configure-aws-credentials@v1
+          if: ${{ always() }} # This ensures that your workflow runs successfully
+          with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: us-west-2
+
+        - name: AWS CodeGuru Reviewer Scanner
+          uses: aws-actions/codeguru-reviewer@v1.1
+          if: ${{ always() }} 
+          with:
+            build_path: target # build artifact(s) directory
+            s3_bucket: codeguru-reviewer-patmanth-bucket  # S3 Bucket with "codeguru-reviewer-*" prefix
+
+        - name: Upload review result
+          if: ${{ github.event_name != 'push' }}
+          uses: github/codeql-action/upload-sarif@v1
+          with:
+            sarif_file: codeguru-results.sarif.json
 
